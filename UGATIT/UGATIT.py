@@ -691,10 +691,20 @@ class UGATIT(object) :
     def predict(self, imgs):
                 
         imgs = imgs/127.5 - 1
-        fake_img = self.sess.run(self.test_fake_B, feed_dict = {self.test_domain_A : imgs})
-        print('fake shape:',fake_img.shape)
+        with timer('predict'):        
+            fake_img = self.sess.run(self.test_fake_B, feed_dict = {self.test_domain_A : imgs})
+        #print('fake shape:',fake_img.shape)
 
         fake_img = ((fake_img+1.) / 2) * 255.0
         fake_img = fake_img.astype('uint8')
         return fake_img
 
+from contextlib import contextmanager
+@contextmanager
+def timer(name):
+    t0 = time.time()
+    yield
+    now = time.time()
+    #print(f'[{name}] done in {time.time() - t0:.0f} s')
+    #print(f'[{name}] done in {now} {t0}s')
+    print(f'[{name}] done in {now-t0} s')

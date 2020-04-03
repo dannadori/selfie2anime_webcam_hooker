@@ -18,13 +18,13 @@ from UGATIT import UGATIT
 '''
 depress warning
 '''
-import logging, warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.simplefilter(action='ignore', category=Warning)
-tf.get_logger().setLevel('INFO')
-tf.autograph.set_verbosity(0)
-tf.get_logger().setLevel(logging.ERROR)
+#import logging, warnings
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#warnings.simplefilter(action='ignore', category=FutureWarning)
+#warnings.simplefilter(action='ignore', category=Warning)
+#tf.get_logger().setLevel('INFO')
+#tf.autograph.set_verbosity(0)
+#tf.get_logger().setLevel(logging.ERROR)
 
 '''
 Command line arguments
@@ -132,19 +132,20 @@ def anime_mode_worker():
 
     while True:
         item_num = anime_mode_input_queue.qsize()
-        print(item_num)
+        #print(item_num)
         for i in range(item_num):
             frame = anime_mode_input_queue.get()
             frame = cv2.resize(frame, dsize=(256, 256))
             frames.append(frame)
-            print(f'{i}/{item_num}')
+            #print(f'{i}/{item_num}')
         if len(frames) < BATCH_SIZE:
             if item_num == 0:
-                time.sleep(1)
+                pass
+                #time.sleep(1)
                 
             continue
         frames = np.array(frames)
-        print(sys.stderr, frames.shape)
+        #print(sys.stderr, frames.shape)
         
         new_frames = anime_model.predict(frames[-1 * BATCH_SIZE:])
 
@@ -291,7 +292,6 @@ def edit_frame(frame):
                 old_frame = cv2.resize(old_frame, (50, 50))
                 new_frame = paste(old_frame, new_frame, +80, -80, 0, 1.0)
 
-                print('pasted')
                 anime_frame_num += 1
                 anime_fps_now    = time.time()
                 if anime_fps_now - anime_fps_start > 5:

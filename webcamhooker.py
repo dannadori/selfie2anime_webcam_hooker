@@ -50,7 +50,16 @@ parser.add_argument('--anime_mode', type=str2bool, required=False, default=False
                     help='enable anime mode')
 
 parser.add_argument('--skip_frame', type=int, required=False, default=1,
-                    help='enable anime mode')
+                    help='enable skip frame')
+
+parser.add_argument('--crop_face', type=str2bool, required=False, default=True,
+                    help='enable crop face')
+
+parser.add_argument('--show_fps', type=str2bool, required=False, default=False,
+                    help='show fpc')
+
+parser.add_argument('--show_source', type=str2bool, required=False, default=False,
+                    help='show source')
 
 '''
 args for anime mode 
@@ -265,67 +274,73 @@ def edit_frame(frame):
     gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_classifier_classifier.detectMultiScale(gray, 1.1, 5)
     
-    for (x,y,w,h) in faces:
-        #cv2.rectangle(frame,(x,y),(x+w,y+h),(255, 0, 0),2)
-        if mode == modes.ANIME_MODE:
-            global anime_buffer_image, anime_frame_num, anime_fps_start, anime_fps, anime_frame_count
+    if mode == modes.ANIME_MODE:
+        if args.crop_face == True:
+            for (x,y,w,h) in faces[:1]:
+                #cv2.rectangle(frame,(x,y),(x+w,y+h),(255, 0, 0),2)
+                global anime_buffer_image, anime_frame_num, anime_fps_start, anime_fps, anime_frame_count
 
-            ### new frame entry to process (raw frame)
-            anime_offsets    = (60, 60)
-            x1, x2, y1, y2    = apply_offsets_for_anime_mode((x,y,w,h), anime_offsets)
-            anime_rgb        = frame[y1:y2, x1:x2]
-            
-                
-            try:
-                cv2.imwrite('tmp.png',anime_rgb)
-                img = cv2.imread('tmp.png', flags=cv2.IMREAD_COLOR)
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)                
-                anime_rgb = img
-                anime_mode_input_queue.put(anime_rgb)
-            except Exception as e:
-                ### if exception occur put original frame
-                anime_mode_input_queue.put(frame)
+                ### new frame entry to process (raw frame)
+                anime_offsets    = (60, 60)
+                x1, x2, y1, y2    = apply_offsets_for_anime_mode((x,y,w,h), anime_offsets)
+                anime_rgb        = frame[y1:y2, x1:x2]
+            if len(faces) == 0:
+                #anime_rgb = np.zeros((256, 256, 3), np.uint8)
+                anime_rgb = None
+        else:
+            anime_rgb = frame
 
+        try:
+            cv2.imwrite('tmp.png',anime_rgb)
+            img = cv2.imread('tmp.png', flags=cv2.IMREAD_COLOR)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)                
+            anime_rgb = img
+            anime_mode_input_queue.put(anime_rgb)
+        except Exception as e:
+            ### if exception occur put original frame
+            #anime_mode_input_queue.put(frame)
+            pass
 
-            ### show edited frame
+        ### show edited frame
+        try:
+            new_frame = anime_mode_output_queue.get(block=False)
+            # to be shown frame(animated frame)
+            (old_frame, new_frame) = new_frame
+            old_frame = cv2.resize(old_frame, (50, 50))
 
-            
-            try:
-                new_frame = anime_mode_output_queue.get(block=False)
-                # to be shown frame(animated frame)
-                (old_frame, new_frame) = new_frame
-                old_frame = cv2.resize(old_frame, (50, 50))
+            if args.show_source == True:
                 new_frame = paste(old_frame, new_frame, +80, -80, 0, 1.0)
 
 
-                anime_fps_now    = time.time()
-                if anime_fps_now - anime_fps_start > 5:
-                    spend_time       = anime_fps_now - anime_fps_start
-                    anime_fps        = round((anime_frame_num / spend_time),2)
-                    anime_fps_start  = anime_fps_now
-                    anime_frame_num  = 0
+            anime_fps_now    = time.time()
+            if anime_fps_now - anime_fps_start > 5:
+                spend_time       = anime_fps_now - anime_fps_start
+                anime_fps        = round((anime_frame_num / spend_time),2)
+                anime_fps_start  = anime_fps_now
+                anime_frame_num  = 0
                     
-                # for fps
-                font_scale=0.5
-                color = (200,200,200)
-                thickness=1
+            # for fps
+            font_scale=0.5
+            color = (200,200,200)
+            thickness=1
+            if args.show_fps == True:
                 cv2.putText(new_frame, f'fps:{anime_fps}',
                             (10,50),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             font_scale, color, thickness, cv2.LINE_AA
                 )
-
-                anime_frame_count += 1
-                if anime_frame_count % args.skip_frame == 0:
-                    anime_frame_count       = 0
-                    anime_buffer_image = new_frame
-                    anime_frame_num += 1
+            
+            anime_frame_count += 1
+            if anime_frame_count % args.skip_frame == 0:
+                anime_frame_count       = 0
+                anime_buffer_image = new_frame
+                anime_frame_num += 1
                 
 
-            except queue.Empty as e:
-                if anime_buffer_image is None:
-                    anime_buffer_image = np.zeros((256, 256, 3), np.uint8)
-                pass
+        except queue.Empty as e:
+            if anime_buffer_image is None:
+                anime_buffer_image = np.zeros((256, 256, 3), np.uint8)
+            pass
 
     ### If face is not detected, show previous frame or blank frame
     if mode == modes.ANIME_MODE:

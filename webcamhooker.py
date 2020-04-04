@@ -18,13 +18,13 @@ from UGATIT import UGATIT
 '''
 depress warning
 '''
-#import logging, warnings
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-#warnings.simplefilter(action='ignore', category=FutureWarning)
-#warnings.simplefilter(action='ignore', category=Warning)
-#tf.get_logger().setLevel('INFO')
-#tf.autograph.set_verbosity(0)
-#tf.get_logger().setLevel(logging.ERROR)
+import logging, warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=Warning)
+tf.get_logger().setLevel('INFO')
+tf.autograph.set_verbosity(0)
+tf.get_logger().setLevel(logging.ERROR)
 
 '''
 Command line arguments
@@ -47,6 +47,9 @@ parser.add_argument('--output_video_dev', type=str, required=True,
 parser.add_argument('--emotion_mode', type=str2bool, required=False, default=False,
                     help='enable emotion mode')
 parser.add_argument('--anime_mode', type=str2bool, required=False, default=False,
+                    help='enable anime mode')
+
+parser.add_argument('--skip_frame', type=int, required=False, default=1,
                     help='enable anime mode')
 
 '''
@@ -106,6 +109,8 @@ anime_buffer_image      = None
 anime_frame_num         = 0
 anime_fps_start         = time.time()
 anime_fps               = 0
+
+anime_frame_count       = 0
 '''
 Mode definition
 '''
@@ -263,7 +268,7 @@ def edit_frame(frame):
     for (x,y,w,h) in faces:
         #cv2.rectangle(frame,(x,y),(x+w,y+h),(255, 0, 0),2)
         if mode == modes.ANIME_MODE:
-            global anime_buffer_image, anime_frame_num, anime_fps_start, anime_fps
+            global anime_buffer_image, anime_frame_num, anime_fps_start, anime_fps, anime_frame_count
 
             ### new frame entry to process (raw frame)
             anime_offsets    = (60, 60)
@@ -292,7 +297,7 @@ def edit_frame(frame):
                 old_frame = cv2.resize(old_frame, (50, 50))
                 new_frame = paste(old_frame, new_frame, +80, -80, 0, 1.0)
 
-                anime_frame_num += 1
+
                 anime_fps_now    = time.time()
                 if anime_fps_now - anime_fps_start > 5:
                     spend_time       = anime_fps_now - anime_fps_start
@@ -309,9 +314,13 @@ def edit_frame(frame):
                             cv2.FONT_HERSHEY_SIMPLEX,
                             font_scale, color, thickness, cv2.LINE_AA
                 )
+
+                anime_frame_count += 1
+                if anime_frame_count % args.skip_frame == 0:
+                    anime_frame_count       = 0
+                    anime_buffer_image = new_frame
+                    anime_frame_num += 1
                 
-                
-                anime_buffer_image = new_frame
 
             except queue.Empty as e:
                 if anime_buffer_image is None:

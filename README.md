@@ -2,16 +2,29 @@
 - old version: https://github.com/dannadori/WebCamHooker
 
 <p align="center">
-<img src="./doc/fps_test2.gif" width="800" />
+<img src="./doc/frame_test_gpu_2080ti.gif" width="800" />
 </p>
 
 ## 1. selfie2anime_webhooker
 selfie2anime_webhooker takes the input image from a physical webcam and modifies it then outputs it to a virtual webcam.
 This vritual cam can be used for video chats such as Teams and Zoom.
 
+This image is with CPU on teams.
 <p align="center">
-<img src="./doc/out.gif" width="800" />
+<img src="./doc/demo_teams_cpu.gif" width="800" />
 </p>
+
+
+You can use gpu, if you want to more fps.
+This is comparisontable.
+- top-left      : CPU Intel 4770
+- top-right     : CPU Intel 9900KF
+- bottom-left   : CPU Intel 9900KF with GPU 2080ti
+- bottom-right  : CPU Intel 9900KF with GPU 2080ti throttling by skip_frame=3
+<p align="center">
+<img src="./doc/frame_test_4screen.gif" width="800" />
+</p>
+
 
 
 ## 2. Prerequisite

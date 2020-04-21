@@ -11,8 +11,32 @@ import queue
 from keras.models import load_model
 import tensorflow as tf
 
+from KeyHit import KBHit
+
 sys.path.append(os.path.join(os.path.dirname(__file__), 'UGATIT'))
 from UGATIT import UGATIT
+
+kb = KBHit()
+
+
+GLOBAL_HOOK_MODE_ANIME     = 'anime'
+GLOBAL_HOOK_MODE_ORIGINAL  = 'original'
+GLOBAL_HOOK_MODE_IMAGE_N    = 'image_'
+
+global_hook_mode = GLOBAL_HOOK_MODE_ANIME
+
+GLOBAL_IMAGES = [
+    'images/image0.png',
+    'images/image1.png',
+    'images/image2.png',
+    'images/image3.png',
+    'images/image4.png',
+    'images/image5.png',
+    'images/image6.png',
+    'images/image7.png',
+    'images/image8.png',
+    'images/image9.png',
+]
 
 
 '''
@@ -271,6 +295,7 @@ def preprocess_input(x, v2=True):
     return x
 
 def edit_frame(frame):
+    input_frame = frame
     gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_classifier_classifier.detectMultiScale(gray, 1.1, 5)
     
@@ -349,6 +374,20 @@ def edit_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         else:
             frame = np.zeros((256, 256, 3), np.uint8)
+
+    ### GLOBAL_MODE_CHANGE
+    if global_hook_mode == GLOBAL_HOOK_MODE_ORIGINAL:
+        frame = input_frame
+    if global_hook_mode.startswith(GLOBAL_HOOK_MODE_IMAGE_N):
+        try:
+            image_num  = int(global_hook_mode[-1])
+            image_file = GLOBAL_IMAGES[image_num]
+            im = cv2.imread(image_file)
+            frame = im
+        except Exception:
+            pass
+            
+
     return frame
 
 
@@ -372,11 +411,42 @@ if __name__=="__main__":
             t = threading.Thread(target=anime_mode_worker)
             t.start()
         while True:
+#            global global_hook_mode
+            if kb.kbhit():
+                c = kb.getch()
+                if c == 'a':
+                    global_hook_mode = GLOBAL_HOOK_MODE_ANIME
+                if c == 'o':
+                    global_hook_mode = GLOBAL_HOOK_MODE_ORIGINAL
+                if c in ['0','1','2','3','4','5','6','7','8','9']:
+                    global_hook_mode = GLOBAL_HOOK_MODE_IMAGE_N + c
+
             ret,im = cap.read()
             im     = edit_frame(im)
             im     = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
             im     = Image.fromarray(np.uint8(im))
-            im.save(p.stdin, 'JPEG')
+            
+            src_width, src_height = im.size
+            dst_width  = 1024
+            dst_height = 1024
+            bg = Image.new('RGB', [dst_width,dst_height], (0,0,0))
+
+            if src_height > src_width:
+                ratio = (dst_height/2) / src_height
+            else:
+                ratio = (dst_width/2)  / src_width
+            new_width  = int(src_width  * ratio)
+            new_height = int(src_height * ratio)
+            print(src_width, src_height, new_width, new_height)
+                             
+            im = im.resize((new_width, new_height))
+            bg.paste(im,
+                     (int((dst_width  - im.size[0])/2),
+                      int((dst_height - im.size[1])/2))
+            )
+            
+#            im.save(p.stdin, 'JPEG')
+            bg.save(p.stdin, 'JPEG')
             
     except KeyboardInterrupt:
         pass
